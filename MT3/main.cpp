@@ -41,7 +41,7 @@ Vector3 Normalize(const Vector3& v) {
 	return { 0.0f, 0.0f, 0.0f };
 }
 
-// 3次元ベクトルの数値表示
+// 数値表示
 static const int kColumnWidth = 60;
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label) {
 	Novice::ScreenPrintf(x, y, "%.02f", vector.x);
