@@ -47,7 +47,43 @@ Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
 // 逆行列
 
 Matrix4x4 Inverse(const Matrix4x4& m) { 
+    Matrix4x4 inverse;
 
+    float a = m.m[0][0], b = m.m[0][1], c = m.m[0][2], d = m.m[0][3];
+    float e = m.m[1][0], f = m.m[1][1], g = m.m[1][2], h = m.m[1][3];
+    float i = m.m[2][0], j = m.m[2][1], k = m.m[2][2], l = m.m[2][3];
+    float m4 = m.m[3][0], n = m.m[3][1], o = m.m[3][2], p = m.m[3][3];
+
+    float determinant =
+        a * (f * (k * p - o * l) - g * (j * p - n * l) + h * (j * o - n * k)) -
+        b * (e * (k * p - o * l) - g * (i * p - m4 * l) + h * (i * o - m4 * k)) +
+        c * (e * (j * p - n * l) - f * (i * p - m4 * l) + h * (i * n - m4 * j)) -
+        d * (e * (j * o - n * k) - f * (i * o - m4 * k) + g * (i * n - m4 * j));
+
+    assert(determinant != 0.0f);
+    float invDet = 1.0f / determinant;
+
+    inverse.m[0][0] = (f * (k * p - o * l) - g * (j * p - n * l) + h * (j * o - n * k)) * invDet;
+    inverse.m[0][1] = -(b * (k * p - o * l) - c * (j * p - n * l) + d * (j * o - n * k)) * invDet;
+    inverse.m[0][2] = (b * (g * p - o * h) - c * (f * p - n * h) + d * (f * o - n * g)) * invDet;
+    inverse.m[0][3] = -(b * (g * l - k * h) - c * (f * l - j * h) + d * (f * k - j * g)) * invDet;
+
+    inverse.m[1][0] = -(e * (k * p - o * l) - g * (i * p - m4 * l) + h * (i * o - m4 * k)) * invDet;
+    inverse.m[1][1] = (a * (k * p - o * l) - c * (i * p - m4 * l) + d * (i * o - m4 * k)) * invDet;
+    inverse.m[1][2] = -(a * (g * p - o * h) - c * (e * p - m4 * h) + d * (e * o - m4 * g)) * invDet;
+    inverse.m[1][3] = (a * (g * l - k * h) - c * (e * l - i * h) + d * (e * k - i * g)) * invDet;
+
+    inverse.m[2][0] = (e * (j * p - n * l) - f * (i * p - m4 * l) + h * (i * n - m4 * j)) * invDet;
+    inverse.m[2][1] = -(a * (j * p - n * l) - b * (i * p - m4 * l) + d * (i * n - m4 * j)) * invDet;
+    inverse.m[2][2] = (a * (f * p - n * h) - b * (e * p - m4 * h) + d * (e * n - m4 * f)) * invDet;
+    inverse.m[2][3] = -(a * (f * l - j * h) - b * (e * l - i * h) + d * (e * j - i * f)) * invDet;
+
+    inverse.m[3][0] = -(e * (j * o - n * k) - f * (i * o - m4 * k) + g * (i * n - m4 * j)) * invDet;
+    inverse.m[3][1] = (a * (j * o - n * k) - b * (i * o - m4 * k) + c * (i * n - m4 * j)) * invDet;
+    inverse.m[3][2] = -(a * (f * o - n * g) - b * (e * o - m4 * g) + c * (e * n - m4 * f)) * invDet;
+    inverse.m[3][3] = (a * (f * k - j * g) - b * (e * k - i * g) + c * (e * j - i * f)) * invDet;
+
+    return inverse;
 }
 // 転置行列
 Matrix4x4 Transpose(const Matrix4x4& m) {
