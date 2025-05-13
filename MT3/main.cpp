@@ -111,10 +111,10 @@ void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label
     const int kRowHeight = 20;
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
-            Novice::ScreenPrintf(x + kColumnWidth * j, y + kRowHeight * i, "%.02f", matrix.m[i][j]);
+            Novice::ScreenPrintf(x + kColumnWidth * j, y + kRowHeight * (i+1), "%.02f", matrix.m[i][j]);
         }
     }
-    Novice::ScreenPrintf(x + kColumnWidth * 4, y, "%s", label);
+    Novice::ScreenPrintf(x, y, "%s", label);
 }
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -170,15 +170,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         ///
         /// ↓描画処理ここから
         ///
-        const int kRowHeight = 100;
+        const int kRowHeight = 120;
         MatrixScreenPrintf(0, 0, resultAdd, "Add");
         MatrixScreenPrintf(0, kRowHeight, resultSubtract, "Subtract");
         MatrixScreenPrintf(0, kRowHeight * 2, resultMultiply, "Multiply");
         MatrixScreenPrintf(0, kRowHeight * 3, inverseM1, "InverseM1");
         MatrixScreenPrintf(0, kRowHeight * 4, inverseM2, "InverseM2");
-        MatrixScreenPrintf(0, kRowHeight * 5, transposeM1, "TransposeM1");
-		MatrixScreenPrintf(0, kRowHeight * 6, transposeM2, "TransposeM2");
-        MatrixScreenPrintf(400, 0, identity, "Identity");
+        MatrixScreenPrintf(300, 0, transposeM1, "TransposeM1");
+		MatrixScreenPrintf(300, kRowHeight, transposeM2, "TransposeM2");
+        MatrixScreenPrintf(300, kRowHeight * 2, identity, "Identity");
         ///
         /// ↑描画処理ここまで
         ///
