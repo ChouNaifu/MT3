@@ -1,5 +1,5 @@
 #include <Novice.h>
-#include <math.h>
+#include <cmath>
 #include <assert.h>
 
 const char kWindowTitle[] = "GC1B_10_チョウ_ナイーフ_タイトル";
@@ -12,23 +12,48 @@ struct Matrix4x4 {
     float m[4][4];
 };
 
-// 平行移動行列
-Matrix4x4 MakeTranslateMatrix(const Vector3& translate) {
+// 行列の積
+Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
+    Matrix4x4 result{};
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            result.m[i][j] = 0.0f;
+            for (int k = 0; k < 4; ++k) {
+                result.m[i][j] += m1.m[i][k] * m2.m[k][j];
+            }
+        }
+    }
+    return result;
+}
+
+// X軸回転行列
+Matrix4x4 MakeRotateXMatrix(float radian) {
     Matrix4x4 result = {
         1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        translate.x, translate.y, translate.z, 1.0f
+        0.0f, std::cos(radian), std::sin(radian), 0.0f,
+        0.0f, -std::sin(radian), std::cos(radian), 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
     };
     return result;
 }
 
-// 拡大縮小行列
-Matrix4x4 MakeScaleMatrix(const Vector3& scale) {
+// Y軸回転行列
+Matrix4x4 MakeRotateYMatrix(float radian) {
     Matrix4x4 result = {
-        scale.x, 0.0f, 0.0f, 0.0f,
-        0.0f, scale.y, 0.0f, 0.0f,
-        0.0f, 0.0f, scale.z, 0.0f,
+        std::cos(radian), 0.0f, -std::sin(radian), 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        std::sin(radian), 0.0f, std::cos(radian), 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    };
+    return result;
+}
+
+// Z軸回転行列
+Matrix4x4 MakeRotateZMatrix(float radian) {
+    Matrix4x4 result = {
+        std::cos(radian), std::sin(radian), 0.0f, 0.0f,
+        -std::sin(radian), std::cos(radian), 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
         0.0f, 0.0f, 0.0f, 1.0f
     };
     return result;
@@ -78,21 +103,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     char preKeys[256] = {0};
 
     // 初期化
-    Vector3 translate{ 4.1f, 2.6f, 0.8f };
-    Vector3 scale{ 1.5f, 5.2f, 7.3f };
-    Vector3 point{ 2.3f, 3.8f, 1.4f };
+    Vector3 rotate{ 0.4f, 1.43f, -0.8f };
 
-    Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
-    Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
+    Matrix4x4 rotateXMatrix = MakeRotateXMatrix(rotate.x);
+    Matrix4x4 rotateYMatrix = MakeRotateYMatrix(rotate.y);
+    Matrix4x4 rotateZMatrix = MakeRotateZMatrix(rotate.z);
 
-    Matrix4x4 transformMatrix = {
-        1.0f, 2.0f, 3.0f, 4.0f,
-        3.0f, 1.0f, 1.0f, 2.0f,
-        1.0f, 4.0f, 2.0f, 3.0f,
-        2.0f, 2.0f, 1.0f, 3.0f
-    };
+    Matrix4x4 rotateXYZMatrix = Multiply(rotateXMatrix, Multiply(rotateYMatrix, rotateZMatrix));
 
-    Vector3 transformed = Transform(point, transformMatrix);
 
     // ウィンドウの×ボタンが押されるまでループ
     while (Novice::ProcessMessage() == 0) {
@@ -114,10 +132,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         ///
         /// ↓描画処理ここから
         ///
-        const int kRowHeight = 20;
-        VectorScreenPrintf(0, 0, transformed, "transformed");
-        MatrixScreenPrintf(0, kRowHeight * 2, translateMatrix, "translateMatrix");
-        MatrixScreenPrintf(0, kRowHeight * 8, scaleMatrix, "scaleMatrix");
+        const int kRowHeight = 100;
+        MatrixScreenPrintf(0, 0, rotateXMatrix, "rotateXMatrix");
+        MatrixScreenPrintf(0, kRowHeight, rotateYMatrix, "rotateYMatrix");
+        MatrixScreenPrintf(0, kRowHeight * 2, rotateZMatrix, "rotateZMatrix");
+        MatrixScreenPrintf(0, kRowHeight * 3, rotateXYZMatrix, "rotateXYZMatrix");
         ///
         /// ↑描画処理ここまで
         ///
