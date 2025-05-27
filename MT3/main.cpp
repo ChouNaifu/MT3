@@ -1,156 +1,229 @@
 #include <Novice.h>
-#include <cmath>
+#include<cmath>
 #include <assert.h>
 
-const char kWindowTitle[] = "GC1B_10_チョウ_ナイーフ_タイトル";
-
-struct Vector3 {
-    float x, y, z;
-};
+const char kWindowTitle[] = "GC2A_07";
 
 struct Matrix4x4 {
-    float m[4][4];
+	float m[4][4];
 };
 
-// 行列の積
-Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
-    Matrix4x4 result{};
-    for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            result.m[i][j] = 0.0f;
-            for (int k = 0; k < 4; ++k) {
-                result.m[i][j] += m1.m[i][k] * m2.m[k][j];
-            }
-        }
-    }
-    return result;
-}
+struct Vector3 {
+	float x, y, z;
+};
 
-// X軸回転行列
 Matrix4x4 MakeRotateXMatrix(float radian) {
-    Matrix4x4 result = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, std::cos(radian), std::sin(radian), 0.0f,
-        0.0f, -std::sin(radian), std::cos(radian), 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    };
-    return result;
-}
+	Matrix4x4 result = {
+		1.0f,0.0f,0.0f,0.0f,
+		0.0f,std::cos(radian),std::sin(radian),0.0f,
+		0.0f,-std::sin(radian),std::cos(radian),0.0f,
+		0.0f,0.0f,0.0f,1.0f
+	};
+	return result;
+};
 
-// Y軸回転行列
 Matrix4x4 MakeRotateYMatrix(float radian) {
-    Matrix4x4 result = {
-        std::cos(radian), 0.0f, -std::sin(radian), 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        std::sin(radian), 0.0f, std::cos(radian), 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    };
-    return result;
-}
+	Matrix4x4 result = {
+		std::cos(radian),0.0f,-std::sin(radian),0.0f,
+		0.0f,1.0f,0.0f,0.0f,
+		std::sin(radian),0.0f,std::cos(radian),0.0f,
+		0.0f,0.0f,0.0f,1.0f
+	};
+	return result;
+};
 
-// Z軸回転行列
 Matrix4x4 MakeRotateZMatrix(float radian) {
-    Matrix4x4 result = {
-        std::cos(radian), std::sin(radian), 0.0f, 0.0f,
-        -std::sin(radian), std::cos(radian), 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    };
-    return result;
+	Matrix4x4 result = {
+			std::cos(radian),std::sin(radian),0.0f,0.0f,
+			-std::sin(radian),std::cos(radian),0.0f,0.0f,
+			0.0f,0.0f,1.0f,0.0f,
+			0.0f,0.0f,0.0f,1.0f
+	};
+	return result;
+};
+
+
+Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
+	Matrix4x4 result{};
+	for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			result.m[i][j] = 0.0f;
+			for (int k = 0; k < 4; ++k) {
+				result.m[i][j] += m1.m[i][k] * m2.m[k][j];
+			}
+		}
+	}
+	return result;
 }
 
-// 座標変換
 Vector3 Transform(const Vector3& vector, const Matrix4x4& matrix) {
-    Vector3 result;
-    float w = vector.x * matrix.m[0][3] + vector.y * matrix.m[1][3] + vector.z * matrix.m[2][3] + matrix.m[3][3];
-    assert(w != 0.0f);
+	Vector3 result;
 
-    result.x = (vector.x * matrix.m[0][0] + vector.y * matrix.m[1][0] + vector.z * matrix.m[2][0] + matrix.m[3][0]) / w;
-    result.y = (vector.x * matrix.m[0][1] + vector.y * matrix.m[1][1] + vector.z * matrix.m[2][1] + matrix.m[3][1]) / w;
-    result.z = (vector.x * matrix.m[0][2] + vector.y * matrix.m[1][2] + vector.z * matrix.m[2][2] + matrix.m[3][2]) / w;
+	result.x = vector.x * matrix.m[0][0] + vector.y * matrix.m[1][0] + vector.z * matrix.m[2][0] + 1.0f * matrix.m[3][0];
+	result.y = vector.x * matrix.m[0][1] + vector.y * matrix.m[1][1] + vector.z * matrix.m[2][1] + 1.0f * matrix.m[3][1];
+	result.z = vector.x * matrix.m[0][2] + vector.y * matrix.m[1][2] + vector.z * matrix.m[2][2] + 1.0f * matrix.m[3][2];
+	float w = vector.x * matrix.m[0][3] + vector.y * matrix.m[1][3] + vector.z * matrix.m[2][3] + 1.0f * matrix.m[3][3];
 
-    return result;
+	assert(w != 0.0f);
+
+	result.x /= w;
+	result.y /= w;
+	result.z /= w;
+
+	return result;
 }
 
-// 数値表示
-void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label) {
-    const int kColumnWidth = 60;
-    const int kRowHeight = 20;
-    for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            Novice::ScreenPrintf(x + kColumnWidth * j, y + kRowHeight * (i+1), "%.02f", matrix.m[i][j]);
-        }
-    }
-    Novice::ScreenPrintf(x, y, "%s", label);
+Matrix4x4 MakeTranslateMatrix(const Vector3& translate)
+{
+	Matrix4x4 result;
+
+	result.m[0][0] = 1.0f;
+	result.m[0][1] = 0.0f;
+	result.m[0][2] = 0.0f;
+	result.m[0][3] = 0.0f;
+
+	result.m[1][0] = 0.0f;
+	result.m[1][1] = 1.0f;
+	result.m[1][2] = 0.0f;
+	result.m[1][3] = 0.0f;
+
+	result.m[2][0] = 0.0f;
+	result.m[2][1] = 0.0f;
+	result.m[2][2] = 1.0f;
+	result.m[2][3] = 0.0f;
+
+	result.m[3][0] = translate.x;
+	result.m[3][1] = translate.y;
+	result.m[3][2] = translate.z;
+	result.m[3][3] = 1.0f;
+
+	return result;
 }
+
+Matrix4x4 MakeScaleMatrix(const Vector3& scale)
+{
+	Matrix4x4 result;
+
+	result.m[0][0] = scale.x;
+	result.m[0][1] = 0.0f;
+	result.m[0][2] = 0.0f;
+	result.m[0][3] = 0.0f;
+
+	result.m[1][0] = 0.0f;
+	result.m[1][1] = scale.y;
+	result.m[1][2] = 0.0f;
+	result.m[1][3] = 0.0f;
+
+	result.m[2][0] = 0.0f;
+	result.m[2][1] = 0.0f;
+	result.m[2][2] = scale.z;
+	result.m[2][3] = 0.0f;
+
+	result.m[3][0] = 0.0f;
+	result.m[3][1] = 0.0f;
+	result.m[3][2] = 0.0f;
+	result.m[3][3] = 1.0f;
+
+	return result;
+}
+
+static const int kRowHeight = 20;
+static const int kColummWidth = 60;
 
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label) {
-    const int kColumnWidth = 60;
-    Novice::ScreenPrintf(x, y, "%.02f", vector.x);
-    Novice::ScreenPrintf(x + kColumnWidth, y, "%.02f", vector.y);
-    Novice::ScreenPrintf(x + kColumnWidth * 2, y, "%.02f", vector.z);
-    Novice::ScreenPrintf(x + kColumnWidth * 3, y, "%s", label);
+	Novice::ScreenPrintf(x, y, "% .02f", vector.x);
+	Novice::ScreenPrintf(x + kColummWidth, y, "%.02f", vector.y);
+	Novice::ScreenPrintf(x + kColummWidth * 2, y, "%.02f", vector.z);
+	Novice::ScreenPrintf(x + kColummWidth * 3, y, "%s", label);
 }
+
+void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label)
+{
+	for (int row = 0; row < 4; ++row)
+	{
+		for (int columm = 0; columm < 4; ++columm)
+		{
+			Novice::ScreenPrintf(
+				x + columm * kColummWidth, y + row * kRowHeight, "%6.02f", matrix.m[row][columm], label);
+		}
+	}
+}
+
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate) {
+	Matrix4x4 result;
+
+	Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
+
+	Matrix4x4 rotateXMatrix = MakeRotateXMatrix(rotate.x);
+	Matrix4x4 rotateYMatrix = MakeRotateYMatrix(rotate.y);
+	Matrix4x4 rotateZMatrix = MakeRotateZMatrix(rotate.z);
+
+	Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
+
+	Matrix4x4 rotateXYZMatrix = Multiply(rotateXMatrix, Multiply(rotateYMatrix, rotateZMatrix));
+
+	result = Multiply(Multiply(scaleMatrix, rotateXYZMatrix), translateMatrix);
+
+	return result;
+
+};
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
-    // ライブラリの初期化
-    Novice::Initialize(kWindowTitle, 1280, 720);
+	// ライブラリの初期化
+	Novice::Initialize(kWindowTitle, 1280, 720);
 
-    // キー入力結果を受け取る箱
-    char keys[256] = {0};
-    char preKeys[256] = {0};
+	// キー入力結果を受け取る箱
+	char keys[256] = { 0 };
+	char preKeys[256] = { 0 };
 
-    // 初期化
-    Vector3 rotate{ 0.4f, 1.43f, -0.8f };
+	Vector3 scale{ 1.2f,0.79f,-2.1f };
+	Vector3 rotate{ 0.4f,1.43f,-0.8f };
+	Vector3 translate{ 2.7f,-4.15f,1.57f };
 
-    Matrix4x4 rotateXMatrix = MakeRotateXMatrix(rotate.x);
-    Matrix4x4 rotateYMatrix = MakeRotateYMatrix(rotate.y);
-    Matrix4x4 rotateZMatrix = MakeRotateZMatrix(rotate.z);
-
-    Matrix4x4 rotateXYZMatrix = Multiply(rotateXMatrix, Multiply(rotateYMatrix, rotateZMatrix));
+	Matrix4x4 worldMatrix = MakeAffineMatrix(scale, rotate, translate);
 
 
-    // ウィンドウの×ボタンが押されるまでループ
-    while (Novice::ProcessMessage() == 0) {
-        // フレームの開始
-        Novice::BeginFrame();
 
-        // キー入力を受け取る
-        memcpy(preKeys, keys, 256);
-        Novice::GetHitKeyStateAll(keys);
+	// ウィンドウの×ボタンが押されるまでループ
+	while (Novice::ProcessMessage() == 0) {
+		// フレームの開始
+		Novice::BeginFrame();
 
-        ///
-        /// ↓更新処理ここから
-        ///
+		// キー入力を受け取る
+		memcpy(preKeys, keys, 256);
+		Novice::GetHitKeyStateAll(keys);
 
-        ///
-        /// ↑更新処理ここまで
-        ///
+		///
+		/// ↓更新処理ここから
+		///
 
-        ///
-        /// ↓描画処理ここから
-        ///
-        const int kRowHeight = 100;
-        MatrixScreenPrintf(0, 0, rotateXMatrix, "rotateXMatrix");
-        MatrixScreenPrintf(0, kRowHeight, rotateYMatrix, "rotateYMatrix");
-        MatrixScreenPrintf(0, kRowHeight * 2, rotateZMatrix, "rotateZMatrix");
-        MatrixScreenPrintf(0, kRowHeight * 3, rotateXYZMatrix, "rotateXYZMatrix");
-        ///
-        /// ↑描画処理ここまで
-        ///
+		///
+		/// ↑更新処理ここまで
+		///
 
-        // フレームの終了
-        Novice::EndFrame();
+		///
+		/// ↓描画処理ここから
+		///
 
-        // ESCキーが押されたらループを抜ける
-        if (preKeys[DIK_ESCAPE] == 0 && keys[DIK_ESCAPE] != 0) {
-            break;
-        }
-    }
+		MatrixScreenPrintf(0, 0, worldMatrix, "worldMatrix");
 
-    // ライブラリの終了
-    Novice::Finalize();
-    return 0;
+
+		///
+		/// ↑描画処理ここまで
+		///
+
+		// フレームの終了
+		Novice::EndFrame();
+
+		// ESCキーが押されたらループを抜ける
+		if (preKeys[DIK_ESCAPE] == 0 && keys[DIK_ESCAPE] != 0) {
+			break;
+		}
+	}
+
+	// ライブラリの終了
+	Novice::Finalize();
+	return 0;
 }
