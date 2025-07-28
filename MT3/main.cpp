@@ -26,6 +26,12 @@ struct Segment {
 	Vector3 diff; 
 };
 
+struct Plane {
+	Vector3 normal;
+	float distance;
+};
+
+
 Vector3 Add(const Vector3& v1, const Vector3& v2) {
 	return { v1.x + v2.x, v1.y + v2.y, v1.z + v2.z };
 }
@@ -40,6 +46,12 @@ Vector3 Multiply(const Vector3& v, float s) {
 
 float Dot(const Vector3& v1, const Vector3& v2) {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+}
+
+Vector3 Normalize(const Vector3& v) {
+	float len = std::sqrt(Dot(v, v));
+	assert(len != 0.0f);
+	return { v.x / len, v.y / len, v.z / len };
 }
 
 // 1. 透視投影行列
@@ -339,6 +351,36 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 	}
 }
 
+Vector3 Perpendicular(const Vector3& vector) {
+	if (vector.x != 0.0f || vector.y != 0.0f) {
+		return { -vector.y, vector.x, 0.0f };
+	}
+	return { 0.0f, -vector.z, vector.y };
+}
+
+void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	Vector3 center = Multiply(plane.normal, plane.distance);
+	Vector3 u = Normalize(Perpendicular(plane.normal));
+	Vector3 v = Normalize(Cross(plane.normal, u));
+	float size = 2.0f; // 平面半徑
+
+	Vector3 corners[4] = {
+		Add(center, Add(Multiply(u, size), Multiply(v, size))),
+		Add(center, Add(Multiply(u, size), Multiply(v, -size))),
+		Add(center, Add(Multiply(u, -size), Multiply(v, -size))),
+		Add(center, Add(Multiply(u, -size), Multiply(v, size)))
+	};
+
+	Vector3 screen[4];
+	for (int i = 0; i < 4; ++i) {
+		screen[i] = Transform(Transform(corners[i], viewProjectionMatrix), viewportMatrix);
+	}
+	for (int i = 0; i < 4; ++i) {
+		int j = (i + 1) % 4;
+		Novice::DrawLine(int(screen[i].x), int(screen[i].y), int(screen[j].x), int(screen[j].y), color);
+	}
+}
+
 Vector3 Project(const Vector3& v1, const Vector3& v2) {
 	float d = Dot(v2, v2);
 	assert(d != 0.0f);
@@ -358,6 +400,11 @@ bool IsCollided(const Sphere& s1, const Sphere& s2) {
 	float distSq = Dot(diff, diff);
 	float rSum = s1.radius + s2.radius;
 	return distSq <= rSum * rSum;
+}
+
+bool IsCollidedSP(const Sphere& sphere, const Plane& plane) {
+	float dist = Dot(sphere.center, plane.normal) - plane.distance;
+	return std::abs(dist) <= sphere.radius;
 }
 
 static const int kRowHeight = 20;
@@ -401,10 +448,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 #pragma endregion
 
-	Sphere sphere1{ {0.0f, 1.0f, 0.0f}, 1.0f };
-	Sphere sphere2{ {1.5f, 1.0f, 0.0f}, 1.0f };
+	Sphere sphere{ {0.0f, 1.0f, 0.0f}, 1.0f };
+	Plane plane{ {0.0f, 1.0f, 0.0f}, 0.0f };
 
-	bool isHit = IsCollided(sphere1, sphere2);
+	bool isHit = IsCollidedSP(sphere, plane);
 	
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -428,7 +475,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Vector3 rotatedOffset = Transform(cameraOffset, rot);
 
 		Vector3 cameraPosition = Add(gridCenter, rotatedOffset);
-		isHit = IsCollided(sphere1, sphere2);
+
+		plane.normal = Normalize(plane.normal);
+		if (sphere.radius < 0.0f) sphere.radius = 0.0f;
+		float dist = Dot(sphere.center, plane.normal) - plane.distance;
+		isHit = std::abs(dist) <= sphere.radius + 1e-4f;
+		Novice::ScreenPrintf(10, 100, "dist: %.3f", dist);
+		Novice::ScreenPrintf(10, 120, "radius: %.3f", sphere.radius);
+		isHit = IsCollidedSP(sphere, plane);
 
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, rotate, translate);
 		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, cameraRotate, cameraTranslate);
@@ -439,10 +493,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
 		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		ImGui::DragFloat3("Sphere1 Center", &sphere1.center.x, 0.01f);
-		ImGui::DragFloat("Sphere1 Radius", &sphere1.radius, 0.01f, 0.01f, 10.0f);
-		ImGui::DragFloat3("Sphere2 Center", &sphere2.center.x, 0.01f);
-		ImGui::DragFloat("Sphere2 Radius", &sphere2.radius, 0.01f, 0.01f, 10.0f);
+		ImGui::DragFloat3("Sphere Center", &sphere.center.x, 0.01f);
+		ImGui::DragFloat("Sphere Radius", &sphere.radius, 0.01f, 0.01f, 10.0f);
+		ImGui::DragFloat3("Plane.Normal", &plane.normal.x, 0.01f);
+		ImGui::DragFloat("Plane.Distance", &plane.distance, 0.01f);
 		ImGui::End();
 		///
 		/// ↑更新処理ここまで
@@ -453,8 +507,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
 
-		DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
-		DrawSphere(sphere2, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		DrawSphere(sphere, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
+		DrawPlane(plane, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
