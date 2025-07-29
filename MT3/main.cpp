@@ -360,24 +360,21 @@ Vector3 Perpendicular(const Vector3& vector) {
 
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
 	Vector3 center = Multiply(plane.normal, plane.distance);
-	Vector3 u = Normalize(Perpendicular(plane.normal));
-	Vector3 v = Normalize(Cross(plane.normal, u));
-	float size = 2.0f; // 平面半徑
+	Vector3 perpendiculars[4];
+	perpendiculars[0] = Normalize(Perpendicular(plane.normal));
+	perpendiculars[1] = Cross(plane.normal, perpendiculars[0]);
+	perpendiculars[2] = { -perpendiculars[0].x, -perpendiculars[0].y, -perpendiculars[0].z };
+	perpendiculars[3] = { -perpendiculars[1].x, -perpendiculars[1].y, -perpendiculars[1].z };
 
-	Vector3 corners[4] = {
-		Add(center, Add(Multiply(u, size), Multiply(v, size))),
-		Add(center, Add(Multiply(u, size), Multiply(v, -size))),
-		Add(center, Add(Multiply(u, -size), Multiply(v, -size))),
-		Add(center, Add(Multiply(u, -size), Multiply(v, size)))
-	};
-
-	Vector3 screen[4];
+	Vector3 points[4];
 	for (int i = 0; i < 4; ++i) {
-		screen[i] = Transform(Transform(corners[i], viewProjectionMatrix), viewportMatrix);
+		Vector3 extend = Multiply(perpendiculars[i], 2.0f);
+		Vector3 point = Add(center, extend);
+		points[i] = Transform(Transform(point, viewProjectionMatrix), viewportMatrix);
 	}
 	for (int i = 0; i < 4; ++i) {
 		int j = (i + 1) % 4;
-		Novice::DrawLine(int(screen[i].x), int(screen[i].y), int(screen[j].x), int(screen[j].y), color);
+		Novice::DrawLine(int(points[i].x), int(points[i].y), int(points[j].x), int(points[j].y), color);
 	}
 }
 
@@ -477,11 +474,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Vector3 cameraPosition = Add(gridCenter, rotatedOffset);
 
 		plane.normal = Normalize(plane.normal);
-		if (sphere.radius < 0.0f) sphere.radius = 0.0f;
-		float dist = Dot(sphere.center, plane.normal) - plane.distance;
-		isHit = std::abs(dist) <= sphere.radius + 1e-4f;
-		Novice::ScreenPrintf(10, 100, "dist: %.3f", dist);
-		Novice::ScreenPrintf(10, 120, "radius: %.3f", sphere.radius);
 		isHit = IsCollidedSP(sphere, plane);
 
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, rotate, translate);
