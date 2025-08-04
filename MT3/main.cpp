@@ -513,6 +513,20 @@ bool IsCollidedAABB(const AABB& aabb1, const AABB& aabb2) {
 	return true;
 }
 
+bool IsCollidedAABBSphere(const AABB& aabb, const Sphere& sphere) {
+
+    float x = std::clamp(sphere.center.x, aabb.min.x, aabb.max.x);
+    float y = std::clamp(sphere.center.y, aabb.min.y, aabb.max.y);
+    float z = std::clamp(sphere.center.z, aabb.min.z, aabb.max.z);
+
+    float dx = x - sphere.center.x;
+    float dy = y - sphere.center.y;
+    float dz = z - sphere.center.z;
+    float distSq = dx * dx + dy * dy + dz * dz;
+
+    return distSq <= sphere.radius * sphere.radius;
+}
+
 static const int kRowHeight = 20;
 static const int kColumnWidth = 60;
 
@@ -554,10 +568,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 #pragma endregion
 
-	AABB aabb1{ {-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 0.0f} };
-	AABB aabb2{ {0.2f, 0.2f, 0.2f}, {1.0f, 1.0f, 1.0f} };
+	AABB aabb{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} };
+	Sphere sphere{ {0.0f, 0.0f, 0.0f}, 0.5f };
 
-	bool isHit = IsCollidedAABB(aabb1, aabb2);
+	bool isHit = IsCollidedAABBSphere(aabb, sphere);
 	
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -582,7 +596,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		Vector3 cameraPosition = Add(gridCenter, rotatedOffset);
 
-		isHit = IsCollidedAABB(aabb1, aabb2);
+		isHit = IsCollidedAABBSphere(aabb, sphere);
 
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, rotate, translate);
 		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, cameraRotate, cameraTranslate);
@@ -594,25 +608,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
 		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
 
-		ImGui::DragFloat3("AABB1 min", &aabb1.min.x, 0.01f);
-		ImGui::DragFloat3("AABB1 max", &aabb1.max.x, 0.01f);
-		ImGui::DragFloat3("AABB2 min", &aabb2.min.x, 0.01f);
-		ImGui::DragFloat3("AABB2 max", &aabb2.max.x, 0.01f);
+		ImGui::DragFloat3("AABB min", &aabb.min.x, 0.01f);
+		ImGui::DragFloat3("AABB max", &aabb.max.x, 0.01f);
+		ImGui::DragFloat3("Sphere Center", &sphere.center.x, 0.01f);
+		ImGui::DragFloat("Sphere Radius", &sphere.radius, 0.01f, 0.01f, 10.0f);
 		ImGui::End();
 
-		aabb1.min.x = (std::min)(aabb1.min.x, aabb1.max.x);
-		aabb1.max.x = (std::max)(aabb1.min.x, aabb1.max.x);
-		aabb1.min.y = (std::min)(aabb1.min.y, aabb1.max.y);
-		aabb1.max.y = (std::max)(aabb1.min.y, aabb1.max.y);
-		aabb1.min.z = (std::min)(aabb1.min.z, aabb1.max.z);
-		aabb1.max.z = (std::max)(aabb1.min.z, aabb1.max.z);
-
-		aabb2.min.x = (std::min)(aabb2.min.x, aabb2.max.x);
-		aabb2.max.x = (std::max)(aabb2.min.x, aabb2.max.x);
-		aabb2.min.y = (std::min)(aabb2.min.y, aabb2.max.y);
-		aabb2.max.y = (std::max)(aabb2.min.y, aabb2.max.y);
-		aabb2.min.z = (std::min)(aabb2.min.z, aabb2.max.z);
-		aabb2.max.z = (std::max)(aabb2.min.z, aabb2.max.z);
+		aabb.min.x = (std::min)(aabb.min.x, aabb.max.x);
+		aabb.max.x = (std::max)(aabb.min.x, aabb.max.x);
+		aabb.min.y = (std::min)(aabb.min.y, aabb.max.y);
+		aabb.max.y = (std::max)(aabb.min.y, aabb.max.y);
+		aabb.min.z = (std::min)(aabb.min.z, aabb.max.z);
+		aabb.max.z = (std::max)(aabb.min.z, aabb.max.z);
 		///
 		/// ↑更新処理ここまで
 		///
@@ -621,9 +628,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
-		DrawAABB(aabb1, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
-		DrawAABB(aabb2, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
-
+		DrawAABB(aabb, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
+		DrawSphere(sphere, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
 		///
 		/// ↑描画処理ここまで
 		///
