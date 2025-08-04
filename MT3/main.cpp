@@ -527,6 +527,37 @@ bool IsCollidedAABBSphere(const AABB& aabb, const Sphere& sphere) {
     return distSq <= sphere.radius * sphere.radius;
 }
 
+bool IsCollision(const AABB& aabb, const Segment& segment) {
+	// 線分の始点と終点
+	Vector3 p0 = segment.origin;
+	Vector3 p1 = Add(segment.origin, segment.diff);
+
+	float tmin = 0.0f;
+	float tmax = 1.0f;
+
+	for (int i = 0; i < 3; ++i) {
+		float segOrigin = (&p0.x)[i];
+		float segEnd = (&p1.x)[i];
+		float boxMin = (&aabb.min.x)[i];
+		float boxMax = (&aabb.max.x)[i];
+		float segDir = segEnd - segOrigin;
+
+		if (fabs(segDir) < 1e-6f) {
+			// 線分がこの軸方向に平行な場合
+			if (segOrigin < boxMin || segOrigin > boxMax) return false;
+		} else {
+			float ood = 1.0f / segDir;
+			float t1 = (boxMin - segOrigin) * ood;
+			float t2 = (boxMax - segOrigin) * ood;
+			if (t1 > t2) std::swap(t1, t2);
+			tmin = (std::max)(tmin, t1);
+			tmax = (std::min)(tmax, t2);
+			if (tmin > tmax) return false;
+		}
+	}
+	return true;
+}
+
 static const int kRowHeight = 20;
 static const int kColumnWidth = 60;
 
@@ -569,10 +600,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma endregion
 
 	AABB aabb{ {-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f} };
-	Sphere sphere{ {0.0f, 0.0f, 0.0f}, 0.5f };
+	Segment segment{ {-0.7f, 0.3f, 0.0f}, { 2.0f, -0.5f, 0.0f } };
 
-	bool isHit = IsCollidedAABBSphere(aabb, sphere);
-	
+	bool isHit = IsCollision(aabb, segment);
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -596,7 +626,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		Vector3 cameraPosition = Add(gridCenter, rotatedOffset);
 
-		isHit = IsCollidedAABBSphere(aabb, sphere);
+		isHit = IsCollision(aabb, segment);
 
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, rotate, translate);
 		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, cameraRotate, cameraTranslate);
@@ -610,8 +640,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		ImGui::DragFloat3("AABB min", &aabb.min.x, 0.01f);
 		ImGui::DragFloat3("AABB max", &aabb.max.x, 0.01f);
-		ImGui::DragFloat3("Sphere Center", &sphere.center.x, 0.01f);
-		ImGui::DragFloat("Sphere Radius", &sphere.radius, 0.01f, 0.01f, 10.0f);
+		ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
+		ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
+
 		ImGui::End();
 
 		aabb.min.x = (std::min)(aabb.min.x, aabb.max.x);
@@ -629,7 +660,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
 		DrawAABB(aabb, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
-		DrawSphere(sphere, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
+		DrawSegment(segment, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
 		///
 		/// ↑描画処理ここまで
 		///
