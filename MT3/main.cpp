@@ -31,6 +31,9 @@ struct Plane {
 	float distance;
 };
 
+struct Triangle {
+	Vector3 vertex[3];
+};
 
 Vector3 Add(const Vector3& v1, const Vector3& v2) {
 	return { v1.x + v2.x, v1.y + v2.y, v1.z + v2.z };
@@ -384,6 +387,16 @@ void DrawSegment(const Segment& segment, const Matrix4x4& viewProjectionMatrix, 
 	Novice::DrawLine(int(p0.x), int(p0.y), int(p1.x), int(p1.y), color);
 }
 
+void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	Vector3 screen[3];
+	for (int i = 0; i < 3; ++i) {
+		screen[i] = Transform(Transform(triangle.vertex[i], viewProjectionMatrix), viewportMatrix);
+	}
+	Novice::DrawLine(int(screen[0].x), int(screen[0].y), int(screen[1].x), int(screen[1].y), color);
+	Novice::DrawLine(int(screen[1].x), int(screen[1].y), int(screen[2].x), int(screen[2].y), color);
+	Novice::DrawLine(int(screen[2].x), int(screen[2].y), int(screen[0].x), int(screen[0].y), color);
+}
+
 Vector3 Project(const Vector3& v1, const Vector3& v2) {
 	float d = Dot(v2, v2);
 	assert(d != 0.0f);
@@ -421,6 +434,46 @@ bool IsCollidedLP(const Segment& segment, const Plane& plane) {
 
 	// どちらかが平面の反対側にあれば衝突
 	return (d0 * d1) <= 0.0f;
+}
+
+bool IsCollidedTL(const Triangle& triangle, const Segment& segment) {
+	const Vector3& v0 = triangle.vertex[0];
+	const Vector3& v1 = triangle.vertex[1];
+	const Vector3& v2 = triangle.vertex[2];
+
+	Vector3 normal = Normalize(Cross(Subtract(v1, v0), Subtract(v2, v0)));
+
+	Vector3 p0 = segment.origin;
+	Vector3 p1 = Add(segment.origin, segment.diff);
+
+	float d0 = Dot(normal, Subtract(p0, v0));
+	float d1 = Dot(normal, Subtract(p1, v0));
+
+	if (d0 * d1 > 0.0f) return false;
+
+	if (fabs(d0 - d1) < 1e-6f) return false;
+
+	float t = d0 / (d0 - d1);
+	Vector3 p = Add(p0, Multiply(Subtract(p1, p0), t));
+
+	Vector3 v01 = Subtract(v1, v0);
+	Vector3 v12 = Subtract(v2, v1);
+	Vector3 v20 = Subtract(v0, v2);
+
+	Vector3 v0p = Subtract(p, v0);
+	Vector3 v1p = Subtract(p, v1);
+	Vector3 v2p = Subtract(p, v2);
+
+	Vector3 cross01 = Cross(v01, v0p);
+	Vector3 cross12 = Cross(v12, v1p);
+	Vector3 cross20 = Cross(v20, v2p);
+
+	if (Dot(cross01, normal) >= 0.0f &&
+		Dot(cross12, normal) >= 0.0f &&
+		Dot(cross20, normal) >= 0.0f) {
+		return true;
+	}
+	return false;
 }
 
 static const int kRowHeight = 20;
@@ -464,10 +517,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 #pragma endregion
 
-	Plane plane{ {0.0f, 1.0f, 0.0f}, 0.0f };
-	Segment segment{ {0.0f, 0.5f, 0.0f}, {2.0f, 0.0f, 0.0f} };
+	Triangle triangle{ { {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} } };
+	Segment segment{ {0.0f, 0.5f, -1.0f}, {0.0f, 0.0f, 2.0f} };
 
-	bool isHit = IsCollidedLP(segment, plane);
+	bool isHit = IsCollidedTL(triangle, segment);
 	
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -492,8 +545,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		Vector3 cameraPosition = Add(gridCenter, rotatedOffset);
 
-		plane.normal = Normalize(plane.normal);
-		isHit = IsCollidedLP(segment, plane);
+		isHit = IsCollidedTL(triangle, segment);
 
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, rotate, translate);
 		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, cameraRotate, cameraTranslate);
@@ -506,8 +558,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
 		ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
 		ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
-		ImGui::DragFloat3("Plane.Normal", &plane.normal.x, 0.01f);
-		ImGui::DragFloat("Plane.Distance", &plane.distance, 0.01f);
+		ImGui::DragFloat3("Triangle v0", &triangle.vertex[0].x, 0.01f);
+		ImGui::DragFloat3("Triangle v1", &triangle.vertex[1].x, 0.01f);
+		ImGui::DragFloat3("Triangle v2", &triangle.vertex[2].x, 0.01f);
 		ImGui::End();
 		///
 		/// ↑更新処理ここまで
@@ -518,7 +571,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
 		DrawSegment(segment, worldViewProjectionMatrix, viewportMatrix, isHit ? RED : WHITE);
-		DrawPlane(plane, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
